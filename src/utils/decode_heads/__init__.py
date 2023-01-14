@@ -8,6 +8,4 @@ from .psp_head import PSPHead
 from .uper_head import UPerHead
 from .segformer_head import SegFormerHead
 
-__all__ = [
-    'FCNHead', 'ASPPHead', 'FPNHead', 'PSPHead', 'SegFormerHead'
-]
+__all__ = ["FCNHead", "ASPPHead", "FPNHead", "PSPHead", "SegFormerHead"]

@@ -23,7 +23,7 @@ def create_loaders(data_root: str, train_ratio: float = 0.8, batch_size: int = 4
 
 
 def get_model(num_classes: int, checkpoint_weights: str):
-    model = get_configured_segformer(num_classes, load_imagenet_model=False)
+    model = get_configured_segformer(num_classes, None, load_imagenet_model=False)
     state_dict = torch.load(checkpoint_weights, map_location=torch.device("cpu"))
     state_dict = state_dict["state_dict"]
     state_dict = {k.replace("module.", ""): v for k, v in state_dict.items()}
@@ -47,7 +47,7 @@ def create_step_fn(model, optimizer, loss_fn, device):
 @click.option("--device", default="cuda:0")
 def train(batch_size, device):
     device = torch.device(device)
-    train_loader, val_loader = create_loaders("data/base")
+    train_loader, val_loader = create_loaders("data/base/base")
     model = get_model(num_classes=512, checkpoint_weights="segformer_7data.pth").to(
         device
     )

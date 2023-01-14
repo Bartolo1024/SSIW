@@ -2,11 +2,11 @@ import torch
 import torch.nn as nn
 from mmcv.cnn import ConvModule
 
-#from ..builder import HEADS
+# from ..builder import HEADS
 from .decode_head import BaseDecodeHead
 
 
-#@HEADS.register_module()
+# @HEADS.register_module()
 class FCNHead(BaseDecodeHead):
     """Fully Convolution Networks for Semantic Segmentation.
     This head is implemented of `FCNNet <https://arxiv.org/abs/1411.4038>`_.
@@ -17,11 +17,7 @@ class FCNHead(BaseDecodeHead):
             before classification layer.
     """
 
-    def __init__(self,
-                 num_convs=2,
-                 kernel_size=3,
-                 concat_input=True,
-                 **kwargs):
+    def __init__(self, num_convs=2, kernel_size=3, concat_input=True, **kwargs):
         assert num_convs >= 0
         self.num_convs = num_convs
         self.concat_input = concat_input
@@ -39,7 +35,9 @@ class FCNHead(BaseDecodeHead):
                 padding=kernel_size // 2,
                 conv_cfg=self.conv_cfg,
                 norm_cfg=self.norm_cfg,
-                act_cfg=self.act_cfg))
+                act_cfg=self.act_cfg,
+            )
+        )
         for i in range(num_convs - 1):
             convs.append(
                 ConvModule(
@@ -49,7 +47,9 @@ class FCNHead(BaseDecodeHead):
                     padding=kernel_size // 2,
                     conv_cfg=self.conv_cfg,
                     norm_cfg=self.norm_cfg,
-                    act_cfg=self.act_cfg))
+                    act_cfg=self.act_cfg,
+                )
+            )
         if num_convs == 0:
             self.convs = nn.Identity()
         else:
@@ -62,7 +62,8 @@ class FCNHead(BaseDecodeHead):
                 padding=kernel_size // 2,
                 conv_cfg=self.conv_cfg,
                 norm_cfg=self.norm_cfg,
-                act_cfg=self.act_cfg)
+                act_cfg=self.act_cfg,
+            )
 
     def forward(self, inputs):
         """Forward function."""

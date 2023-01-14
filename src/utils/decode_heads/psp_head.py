@@ -3,7 +3,8 @@ import torch.nn as nn
 from mmcv.cnn import ConvModule
 
 from mmseg.ops import resize
-#from ..builder import HEADS
+
+# from ..builder import HEADS
 from .decode_head import BaseDecodeHead
 
 
@@ -20,8 +21,16 @@ class PPM(nn.ModuleList):
         align_corners (bool): align_corners argument of F.interpolate.
     """
 
-    def __init__(self, pool_scales, in_channels, channels, conv_cfg, norm_cfg,
-                 act_cfg, align_corners):
+    def __init__(
+        self,
+        pool_scales,
+        in_channels,
+        channels,
+        conv_cfg,
+        norm_cfg,
+        act_cfg,
+        align_corners,
+    ):
         super(PPM, self).__init__()
         self.pool_scales = pool_scales
         self.align_corners = align_corners
@@ -40,7 +49,10 @@ class PPM(nn.ModuleList):
                         1,
                         conv_cfg=self.conv_cfg,
                         norm_cfg=self.norm_cfg,
-                        act_cfg=self.act_cfg)))
+                        act_cfg=self.act_cfg,
+                    ),
+                )
+            )
 
     def forward(self, x):
         """Forward function."""
@@ -50,13 +62,14 @@ class PPM(nn.ModuleList):
             upsampled_ppm_out = resize(
                 ppm_out,
                 size=x.size()[2:],
-                mode='bilinear',
-                align_corners=self.align_corners)
+                mode="bilinear",
+                align_corners=self.align_corners,
+            )
             ppm_outs.append(upsampled_ppm_out)
         return ppm_outs
 
 
-#@HEADS.register_module()
+# @HEADS.register_module()
 class PSPHead(BaseDecodeHead):
     """Pyramid Scene Parsing Network.
     This head is the implementation of
@@ -77,7 +90,8 @@ class PSPHead(BaseDecodeHead):
             conv_cfg=self.conv_cfg,
             norm_cfg=self.norm_cfg,
             act_cfg=self.act_cfg,
-            align_corners=self.align_corners)
+            align_corners=self.align_corners,
+        )
         self.bottleneck = ConvModule(
             self.in_channels + len(pool_scales) * self.channels,
             self.channels,
@@ -85,7 +99,8 @@ class PSPHead(BaseDecodeHead):
             padding=1,
             conv_cfg=self.conv_cfg,
             norm_cfg=self.norm_cfg,
-            act_cfg=self.act_cfg)
+            act_cfg=self.act_cfg,
+        )
 
     def forward(self, inputs):
         """Forward function."""

@@ -2,13 +2,14 @@ from abc import ABCMeta, abstractmethod
 
 import torch
 import torch.nn as nn
-#from mmcv.cnn import normal_init
-#from mmcv.runner import auto_fp16, force_fp32
 
-#from mmseg.core import build_pixel_sampler
-#from mmseg.ops import resize
-#from ..builder import build_loss
-#from ..losses import accuracy
+# from mmcv.cnn import normal_init
+# from mmcv.runner import auto_fp16, force_fp32
+
+# from mmseg.core import build_pixel_sampler
+# from mmseg.ops import resize
+# from ..builder import build_loss
+# from ..losses import accuracy
 
 
 class BaseDecodeHead(nn.Module, metaclass=ABCMeta):
@@ -42,24 +43,23 @@ class BaseDecodeHead(nn.Module, metaclass=ABCMeta):
             Default: False.
     """
 
-    def __init__(self,
-                 in_channels,
-                 channels,
-                 *,
-                 num_classes,
-                 dropout_ratio=0.1,
-                 conv_cfg=None,
-                 norm_cfg=None,
-                 act_cfg=dict(type='ReLU'),
-                 in_index=-1,
-                 input_transform=None,
-                 loss_decode=dict(
-                     type='CrossEntropyLoss',
-                     use_sigmoid=False,
-                     loss_weight=1.0),
-                 ignore_index=255,
-                 sampler=None,
-                 align_corners=False):
+    def __init__(
+        self,
+        in_channels,
+        channels,
+        *,
+        num_classes,
+        dropout_ratio=0.1,
+        conv_cfg=None,
+        norm_cfg=None,
+        act_cfg=dict(type="ReLU"),
+        in_index=-1,
+        input_transform=None,
+        loss_decode=dict(type="CrossEntropyLoss", use_sigmoid=False, loss_weight=1.0),
+        ignore_index=255,
+        sampler=None,
+        align_corners=False
+    ):
         super(BaseDecodeHead, self).__init__()
         self._init_inputs(in_channels, in_index, input_transform)
         self.channels = channels
@@ -69,7 +69,7 @@ class BaseDecodeHead(nn.Module, metaclass=ABCMeta):
         self.norm_cfg = norm_cfg
         self.act_cfg = act_cfg
         self.in_index = in_index
-        self.loss_decode = None # build_loss(loss_decode)
+        self.loss_decode = None  # build_loss(loss_decode)
         self.ignore_index = ignore_index
         self.align_corners = align_corners
         # if sampler is not None:
@@ -115,14 +115,14 @@ class BaseDecodeHead(nn.Module, metaclass=ABCMeta):
         # """
         #
         if input_transform is not None:
-            assert input_transform in ['resize_concat', 'multiple_select']
+            assert input_transform in ["resize_concat", "multiple_select"]
         self.input_transform = input_transform
         self.in_index = in_index
         if input_transform is not None:
             assert isinstance(in_channels, (list, tuple))
             assert isinstance(in_index, (list, tuple))
             assert len(in_channels) == len(in_index)
-            if input_transform == 'resize_concat':
+            if input_transform == "resize_concat":
                 self.in_channels = sum(in_channels)
             else:
                 self.in_channels = in_channels
@@ -164,8 +164,8 @@ class BaseDecodeHead(nn.Module, metaclass=ABCMeta):
         #
         # return inputs
 
-    #@auto_fp16()
-    #@abstractmethod
+    # @auto_fp16()
+    # @abstractmethod
     def forward(self, inputs):
         """Placeholder of forward function."""
         pass
@@ -236,7 +236,7 @@ class BaseDecodeHead(nn.Module, metaclass=ABCMeta):
         # else:
         #     raise NameError("No vec in loss_decode")
 
-    #@force_fp32(apply_to=('seg_logit', ))
+    # @force_fp32(apply_to=('seg_logit', ))
     def losses(self, seg_logit, seg_label):
         pass
         # """Compute segmentation loss."""
