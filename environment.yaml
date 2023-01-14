@@ -1,0 +1,21 @@
+name: ssiw
+channels:
+  - pytorch
+  - nvidia
+  - defaults
+dependencies:
+  - click
+  - ipython
+  - pip
+  - python>=3.10
+  - matplotlib
+  - pytorch-cuda
+  - torchvision
+  - pip:
+      - black
+      - flake8
+      - tqdm
+      - livelossplot
+      - mmcv
+      - mmsegmentation
+      - timm
