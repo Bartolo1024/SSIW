@@ -1,8 +1,11 @@
-from typing import Any, Callable, Optional, Sequence, Tuple, Union
+import logging
+from typing import Any, Callable, Optional, Sequence, Tuple, Union, List
 import yaml
 import click
 import torch
-from ignite.engine import Engine
+from ignite.engine import Engine, Events
+from ignite.metrics import Loss, RunningAverage
+from ignite.contrib.handlers import ProgressBar, global_step_from_engine
 from torch import optim
 from torch.utils.data import DataLoader, random_split
 
@@ -10,6 +13,26 @@ from src.utils.dataflow import CMPDataset
 from src.utils.loss import HDLoss
 from src.utils.segformer import get_configured_segformer
 from src.utils.get_class_emb import create_embs_from_names
+
+
+def loss_running_average(
+    engine: Engine,
+    monitoring_metrics: Sequence[str] = ("loss",),
+    running_average_decay: float = 0.98,
+    prefix: str = "batch_",
+) -> List[str]:
+    """partial instead of lambda - see https://github.com/pytorch/ignite/issues/639"""
+    from functools import partial
+
+    def output_transform(x, key: str):
+        return x.get(key, 1.0)
+
+    for m in monitoring_metrics:
+        RunningAverage(
+            alpha=running_average_decay,
+            output_transform=partial(output_transform, key=m),
+        ).attach(engine, prefix + m)
+    return [prefix + m for m in monitoring_metrics]
 
 
 def load_labels(path):
@@ -44,6 +67,9 @@ def get_model(num_classes: int, checkpoint_weights: str, freeze: bool = True):
     state_dict = {k.replace("module.", ""): v for k, v in state_dict.items()}
     del state_dict["criterion.0.logit_scale"]
     model.load_state_dict(state_dict)
+    if freeze:
+        for param in model.segmodel.encoder.parameters():
+            param.requires_grad = False
     return model
 
 
@@ -51,7 +77,6 @@ def create_step_fn(model: torch.nn.Module,
     optimizer: torch.optim.Optimizer,
     loss_fn: Union[Callable, torch.nn.Module],
     device: Optional[Union[str, torch.device]] = None,
-    output_transform: Callable[[Any, Any, Any, torch.Tensor], Any] = lambda x, y, y_pred, loss: loss.item(),
     ):
     def update(_: Engine, batch: Sequence[torch.Tensor]) -> Union[Any, Tuple[torch.Tensor]]:
         optimizer.zero_grad()
@@ -61,29 +86,80 @@ def create_step_fn(model: torch.nn.Module,
         target = target.to(device)
         one_hot = one_hot.to(device)
         y_pred, _, _ = model(x)
-        breakpoint()
         loss = loss_fn(y_pred, target, one_hot)
         loss.backward()
         optimizer.step()
-        return output_transform(x, target, y_pred, loss)
+        return {
+            "loss": loss.item()
+        }
     return update
+
+
+def create_evaluation_step_fn(
+    model: torch.nn.Module,
+    device: Optional[Union[str, torch.device]] = None,
+    output_transform: Callable[[Any, Any, Any, Any], Any] = lambda x, y, y_pred, one_hot: (y_pred, y, one_hot),
+) -> Callable:
+    def evaluate_step(_: Engine, batch: Sequence[torch.Tensor]) -> Union[Any, Tuple[torch.Tensor]]:
+        model.eval()
+        with torch.no_grad():
+            x, target, one_hot = batch
+            x = x.to(device)
+            target = target.to(device)
+            one_hot = one_hot.to(device)
+            y_pred, _, _ = model(x)
+            return output_transform(x, target, y_pred, {"one_hot": one_hot})
+
+    return evaluate_step
+
+
+def create_print_fn(trainer: Engine):
+    def print_metrics(engine: Engine):
+        current_step = global_step_from_engine(trainer)
+        for k, v in engine.state.metrics.items():
+            logging.info(f"Step: {current_step} | {k}: {v}")
+    return print_metrics
 
 
 @click.command()
 @click.option("--batch-size", default=2)
+@click.option("--max-epochs", default=100)
 @click.option("--device", default="cuda:0")
 @click.option("--labels-path", default="src/configs/labels.yaml")
-def train(batch_size, device, labels_path):
+def train(batch_size, max_epochs, device, labels_path):
     device = torch.device(device)
     embs = load_embeddings(labels_path)
     train_loader, val_loader = create_loaders(embs, "data/base/base", batch_size=batch_size)
     model = get_model(num_classes=512, checkpoint_weights="segformer_7data.pth").to(device)
+    embs = embs.to(device)
     loss_fn = HDLoss(embs).to(device)
     optimizer = optim.Adam(lr=0.0005, params=model.parameters())
-    step_fn = create_step_fn(model, optimizer, loss_fn, device)
 
+    # TRAINER
+    step_fn = create_step_fn(model, optimizer, loss_fn, device)
     trainer = Engine(step_fn)
-    trainer.run(train_loader)
+    print_metrics = create_print_fn(trainer)
+    loss_running_average(trainer)
+    trainer.add_event_handler(Events.EPOCH_COMPLETED, print_metrics)
+    ProgressBar().attach(trainer)
+
+    # EVALUATOR
+    metrics = {'val_loss': Loss(loss_fn)}
+    eval_step_fn = create_evaluation_step_fn(model, device)
+    evaluator = Engine(eval_step_fn)
+    for name, metric in metrics.items():
+        metric.attach(evaluator, name)
+    evaluator.add_event_handler(Events.COMPLETED, print_metrics)
+    ProgressBar().attach(evaluator)
+
+    def eval(_: Engine):
+        evaluator.run(val_loader)
+    trainer.add_event_handler(Events.EPOCH_COMPLETED(every=2), eval)
+
+    trainer.run(train_loader, max_epochs=max_epochs)
+
+    sd = model.state_dict()
+    torch.save({'state_dict': sd}, 'out.pth')
 
 
 if __name__ == "__main__":

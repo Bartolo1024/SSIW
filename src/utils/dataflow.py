@@ -84,7 +84,6 @@ class CMPDataset(Dataset):
                 self.items.append((img_path, ann_path))
         self.embeddigns = embeddigns
         self.num_classes = embeddigns.shape[0]
-        # self.label_map = self.create_cmp_label_map(self.labels)
 
     def create_cmp_label_map(self, labels: Dict[str, Dict[str, Union[str, int]]], start_idx: int = 194):
         ret = {}
@@ -106,7 +105,7 @@ class CMPDataset(Dataset):
 
     def label_img_to_embedding_space(self, x: torch.Tensor):
         orig_shape = x.shape
-        indices = x.view(-1).long() - 2# index from 0 + skip background
+        indices = x.view(-1).long()
         feature_map = self.embeddigns[indices]
         feature_map = feature_map.view(*orig_shape, self.embeddigns.shape[-1])
         return feature_map
@@ -119,9 +118,8 @@ class CMPDataset(Dataset):
         x = self.transform(img)
 
         ann = self.ann_transform(ann).squeeze(0)
+        ann = ann - 1 # change indexing
         target = self.label_img_to_embedding_space(ann).permute(2, 0, 1)
-
-        # cls_target = self.map_pixels(ann)
         one_hot = self.create_one_hot_label(ann)
 
         return x, target, one_hot
@@ -137,6 +135,9 @@ class CMPDataset(Dataset):
     def create_one_hot_label(self, ann: torch.Tensor):
         base_shape = ann.shape
         ann = ann.view(-1)
-        one_hot = F.one_hot(ann.long(), num_classes=self.num_classes)
+        try:
+            one_hot = F.one_hot(ann.long(), num_classes=self.num_classes)
+        except:
+            breakpoint()
         one_hot = one_hot.view(*base_shape, self.num_classes).permute(2, 0, 1)
         return one_hot
