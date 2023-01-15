@@ -6,21 +6,23 @@ from matplotlib import pyplot as plt
 from torch import nn
 from torchvision import transforms
 
-from src.tools.train import get_model, load_embeddings, load_labels
+from src.tools.train import get_model, load_embeddings
 from src.utils.loss import nxn_cos_sim
 from src.utils.transforms_utils import get_imagenet_mean_std
 
 
 class ImageLoader:
-    def __init__(self):
+    def __init__(self, device: torch.device):
         mean, std = get_imagenet_mean_std()
         self.normalizer = transforms.Normalize(mean, std)
         self.to_tensor = transforms.ToTensor()
+        self.device = device
 
     def __call__(self, img_path: str):
         img = PIL.Image.open(img_path).convert("RGB")
         x = self.to_tensor(img)
-        x = self.normalizer(x)
+        x = self.normalizer(x).to(self.device)
+        x = self.normalizer(x).to(self.device)
         return img, x
 
 
@@ -40,15 +42,16 @@ def plot(labels: np.ndarray):
 
 @click.command()
 @click.argument("img_path")
+@click.argument("checkpoint_path")
 @click.option("--device", default="cuda:0")
 @click.option("--labels-path", default="src/configs/labels.yaml")
-def train(img_path, device, labels_path):
-    img_loader = ImageLoader()
+def train(img_path, checkpoint_path, device, labels_path):
     device = torch.device(device)
-    # labels = load_labels(labels_path)
+    img_loader = ImageLoader(device)
+    device = torch.device(device)
     embs = load_embeddings(labels_path)
     embs = embs.to(device)
-    model = get_model(num_classes=512, checkpoint_weights="out.pth").to(device)
+    model = get_model(num_classes=512, checkpoint_weights=checkpoint_path).to(device)
     img, x = img_loader(img_path)
     labels = predict(x, model, embs)
     plot(labels)

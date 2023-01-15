@@ -66,14 +66,14 @@ def create_loaders(
         dataset, lengths=[train_len, len(dataset) - train_len]
     )
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
+    val_dataloader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False)
     return train_dataloader, val_dataloader
 
 
 def get_model(num_classes: int, checkpoint_weights: str, freeze: bool = False):
     model = get_configured_segformer(num_classes, None, load_imagenet_model=False)
     state_dict = torch.load(checkpoint_weights, map_location=torch.device("cpu"))
-    state_dict = state_dict["state_dict"]
+    state_dict = state_dict["state_dict"] if "state_dict" in state_dict.keys() else state_dict["model"]
     state_dict = {k.replace("module.", ""): v for k, v in state_dict.items()}
     if "criterion.0.logit_scale" in state_dict:
         logit_scale = state_dict["criterion.0.logit_scale"]
