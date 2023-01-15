@@ -6,7 +6,7 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import Dataset
 from torchvision import transforms
-from torchvision.transforms.functional import crop, get_dimensions
+from torchvision.transforms.functional import crop, get_dimensions, pad
 
 from src.utils import transforms_utils
 from src.utils.labels_dict import UNI_UID2UNAME
@@ -23,8 +23,8 @@ class PairRandomCrop(transforms.RandomCrop):
             Tuple of two PIL Image or Tensor: Cropped image.
         """
         if self.padding is not None:
-            img1 = F.pad(img1, self.padding, self.fill, self.padding_mode)
-            img2 = F.pad(img2, self.padding, self.fill, self.padding_mode)
+            img1 = pad(img1, self.padding, self.fill, self.padding_mode)
+            img2 = pad(img2, self.padding, self.fill, self.padding_mode)
 
         _, height, width = get_dimensions(img1)
         _, height2, width2 = get_dimensions(img2)
@@ -34,14 +34,14 @@ class PairRandomCrop(transforms.RandomCrop):
         # pad the width if needed
         if self.pad_if_needed and width < self.size[1]:
             padding = [self.size[1] - width, 0]
-            img1 = F.pad(img1, padding, self.fill, self.padding_mode)
-            img2 = F.pad(img2, padding, self.fill, self.padding_mode)
+            img1 = pad(img1, padding, self.fill, self.padding_mode)
+            img2 = pad(img2, padding, self.fill, self.padding_mode)
 
         # pad the height if needed
         if self.pad_if_needed and height < self.size[0]:
             padding = [0, self.size[0] - height]
-            img1 = F.pad(img1, padding, self.fill, self.padding_mode)
-            img2 = F.pad(img2, padding, self.fill, self.padding_mode)
+            img1 = pad(img1, padding, self.fill, self.padding_mode)
+            img2 = pad(img2, padding, self.fill, self.padding_mode)
 
         i, j, h, w = self.get_params(img1, self.size)
 
@@ -59,7 +59,7 @@ class CMPDataset(Dataset):
             (img_size, img_size) if isinstance(img_size, int) else img_size
         )
         mean, std = transforms_utils.get_imagenet_mean_std()
-        self.pair_crop = PairRandomCrop(img_size, pad_if_needed=True)
+        self.pair_crop = PairRandomCrop(img_size, pad_if_needed=True, fill=1)
         self.transform = transforms.Compose(
             [
                 transforms.ToTensor(),

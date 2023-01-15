@@ -11,9 +11,10 @@ def nxn_cos_sim(A, B, dim=1, eps=1e-8):
 
 
 class HDLoss(nn.Module):
-    def __init__(self, embeddigns: torch.Tensor):
+    def __init__(self, embeddigns: torch.Tensor, logit_scale: float):
         super().__init__()
         self.log_softmax = nn.LogSoftmax(dim=-1)
+        self.logit_scale = logit_scale
         self.embeddings = embeddigns
 
     def __call__(self, output: torch.Tensor, target: torch.Tensor, one_hot: torch.Tensor):
@@ -21,7 +22,7 @@ class HDLoss(nn.Module):
         output = output.permute(0, 2, 3, 1).view(-1, channels)
         cos_sim = nxn_cos_sim(output, self.embeddings)
         one_hot = one_hot.permute(0, 2, 3, 1).reshape(-1, one_hot.shape[1])
-        loss = self.log_softmax(cos_sim)
+        loss = self.log_softmax(cos_sim / self.logit_scale)
         loss = loss * one_hot
         loss = -loss.mean()
         return loss

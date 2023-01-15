@@ -5,7 +5,8 @@ import click
 import torch
 from ignite.engine import Engine, Events
 from ignite.metrics import Loss, RunningAverage
-from ignite.contrib.handlers import ProgressBar, global_step_from_engine
+from ignite.contrib.handlers import ProgressBar
+from ignite.handlers import Checkpoint, global_step_from_engine
 from torch import optim
 from torch.utils.data import DataLoader, random_split
 
@@ -65,12 +66,23 @@ def get_model(num_classes: int, checkpoint_weights: str, freeze: bool = True):
     state_dict = torch.load(checkpoint_weights, map_location=torch.device("cpu"))
     state_dict = state_dict["state_dict"]
     state_dict = {k.replace("module.", ""): v for k, v in state_dict.items()}
-    del state_dict["criterion.0.logit_scale"]
+    if 'criterion.0.logit_scale' in state_dict:
+        logit_scale = state_dict["criterion.0.logit_scale"]
+        del state_dict["criterion.0.logit_scale"]
     model.load_state_dict(state_dict)
     if freeze:
         for param in model.segmodel.encoder.parameters():
             param.requires_grad = False
     return model
+
+
+def get_logit_scale(checkpoint_weights: str):
+    state_dict = torch.load(checkpoint_weights, map_location=torch.device("cpu"))
+    state_dict = state_dict["state_dict"]
+    state_dict = {k.replace("module.", ""): v for k, v in state_dict.items()}
+    logit_scale = state_dict["criterion.0.logit_scale"]
+    logging.info(f"Load logit scale {logit_scale}")
+    return logit_scale
 
 
 def create_step_fn(model: torch.nn.Module,
@@ -113,9 +125,9 @@ def create_evaluation_step_fn(
     return evaluate_step
 
 
-def create_print_fn(trainer: Engine):
+def create_print_fn(trainer: Engine, event: Events):
     def print_metrics(engine: Engine):
-        current_step = global_step_from_engine(trainer)()
+        current_step = global_step_from_engine(trainer)(None, event)
         for k, v in engine.state.metrics.items():
             print(f"Step: {current_step} | {k}: {v}")
     return print_metrics
@@ -126,22 +138,29 @@ def create_print_fn(trainer: Engine):
 @click.option("--max-epochs", default=100)
 @click.option("--device", default="cuda:0")
 @click.option("--labels-path", default="src/configs/labels.yaml")
-def train(batch_size, max_epochs, device, labels_path):
+@click.option("--checkpoint-weights", default="segformer_7data.pth")
+@click.option("--data-root", default="data/base/base")
+def train(batch_size, max_epochs, device, labels_path, checkpoint_weights, data_root):
     device = torch.device(device)
     embs = load_embeddings(labels_path)
-    train_loader, val_loader = create_loaders(embs, "data/base/base", batch_size=batch_size)
-    model = get_model(num_classes=512, checkpoint_weights="segformer_7data.pth").to(device)
+    train_loader, val_loader = create_loaders(embs, data_root, batch_size=batch_size)
+    model = get_model(num_classes=512, checkpoint_weights=checkpoint_weights).to(device)
     embs = embs.to(device)
-    loss_fn = HDLoss(embs).to(device)
+    logit_scale = get_logit_scale(checkpoint_weights=checkpoint_weights)
+    loss_fn = HDLoss(embs, logit_scale).to(device)
     optimizer = optim.Adam(lr=0.0005, params=model.parameters())
 
     # TRAINER
     step_fn = create_step_fn(model, optimizer, loss_fn, device)
     trainer = Engine(step_fn)
-    print_metrics = create_print_fn(trainer)
+    print_metrics = create_print_fn(trainer, Events.ITERATION_COMPLETED)
     loss_running_average(trainer, prefix='train_')
     trainer.add_event_handler(Events.EPOCH_COMPLETED, print_metrics)
     ProgressBar().attach(trainer)
+    to_save = {'model': model, 'optimizer': optimizer, 'trainer': trainer}
+    checkpointer = Checkpoint(to_save, 'output/', n_saved=10)
+    trainer.add_event_handler(Events.EPOCH_COMPLETED(every=10), checkpointer)
+    trainer.add_event_handler(Events.COMPLETED, checkpointer)
 
     # EVALUATOR
     metrics = {'val_loss': Loss(loss_fn)}
