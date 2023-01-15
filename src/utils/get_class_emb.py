@@ -1,8 +1,10 @@
-import torch
-import numpy as np
 import os
 import os.path as osp
-from src.utils.labels_dict import UNI_UID2UNAME, ALL_LABEL2ID, UNAME2EM_NAME
+
+import numpy as np
+import torch
+
+from src.utils.labels_dict import ALL_LABEL2ID, UNAME2EM_NAME, UNI_UID2UNAME
 
 UNI_UNAME2ID = {v: i for i, v in UNI_UID2UNAME.items()}
 

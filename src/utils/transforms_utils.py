@@ -1,8 +1,9 @@
+import random
+from typing import Optional, Tuple
+
 import cv2
 import numpy as np
-import random
 import torch
-from typing import Optional, Tuple
 
 
 def get_imagenet_mean_std() -> Tuple[

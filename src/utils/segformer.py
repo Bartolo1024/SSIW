@@ -1,23 +1,22 @@
-import os
+import logging
 import math
+import os
+from functools import partial
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from functools import partial
-
-# from mmseg.models.builder import BACKBONES
-from mmseg.utils import get_root_logger
-from mmcv.runner import load_checkpoint
 from mmcv.cnn import ConvModule, DepthwiseSeparableConvModule
 from mmcv.cnn.bricks import build_norm_layer
+from mmcv.runner import load_checkpoint
 from mmseg.ops import resize
+# from mmseg.models.builder import BACKBONES
+from mmseg.utils import get_root_logger
+# pip install timm==0.3.2
+from timm.models.layers import DropPath, to_2tuple, trunc_normal_
 
 # from .decode_heads.decode_head import BaseDecodeHead
 from src.utils.decode_heads.aspp_head import ASPPHead, ASPPModule
-
-# pip install timm==0.3.2
-from timm.models.layers import DropPath, to_2tuple, trunc_normal_
-import logging
 from src.utils.decode_heads.segformer_head import SegFormerHead
 
 logger = logging.getLogger(__name__)

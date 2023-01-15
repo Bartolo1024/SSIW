@@ -1,8 +1,8 @@
 import os
-import numpy as np
+
 import gensim
 import gensim.downloader
-
+import numpy as np
 
 UNI_UID2UNAME = {
     0: "backpack",

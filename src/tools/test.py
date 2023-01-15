@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
-import os, sys
+import os
+import sys
 
 CODE_SPACE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(CODE_SPACE)
@@ -10,35 +11,30 @@ os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 import argparse
-import cv2
+import ast
+import glob
+import json
 import logging
+
+import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
+import torch.distributed as dist
+import torch.multiprocessing as mp
 import torch.nn.functional as F
-import json
-
+from PIL import Image
+from tqdm import tqdm
 
 import src.utils.config as config
-from src.utils.config import CfgNode
-from src.utils.transforms_utils import (
-    get_imagenet_mean_std,
-    normalize_img,
-    pad_to_crop_sz,
-    resize_by_scaled_short_side,
-)
-import matplotlib.pyplot as plt
 from src.utils.color_seg import color_seg
-
-import glob
-from PIL import Image
-from src.utils.labels_dict import UNI_UID2UNAME, ALL_LABEL2ID, UNAME2EM_NAME
-import torch.multiprocessing as mp
-from src.utils.segformer import get_configured_segformer
-from tqdm import tqdm
-import torch.distributed as dist
-
+from src.utils.config import CfgNode
 from src.utils.get_class_emb import create_embs_from_names
-import ast
+from src.utils.labels_dict import ALL_LABEL2ID, UNAME2EM_NAME, UNI_UID2UNAME
+from src.utils.segformer import get_configured_segformer
+from src.utils.transforms_utils import (get_imagenet_mean_std, normalize_img,
+                                        pad_to_crop_sz,
+                                        resize_by_scaled_short_side)
 
 
 def get_logger():

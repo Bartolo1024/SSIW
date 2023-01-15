@@ -1,7 +1,6 @@
 import numpy as np
 import torch.nn as nn
 from mmcv.cnn import ConvModule
-
 from mmseg.ops import resize
 
 # from ..builder import HEADS

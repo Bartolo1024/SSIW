@@ -1,10 +1,11 @@
-import numpy as np
-import torch.nn as nn
-import torch
-from mmcv.cnn import ConvModule, DepthwiseSeparableConvModule
 from collections import OrderedDict
 
+import numpy as np
+import torch
+import torch.nn as nn
+from mmcv.cnn import ConvModule, DepthwiseSeparableConvModule
 from mmseg.ops import resize
+
 from .decode_head import BaseDecodeHead
 
 

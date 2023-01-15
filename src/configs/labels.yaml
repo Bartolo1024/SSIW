@@ -1,4 +1,11 @@
 # From docs (https://cmp.felk.cvut.cz/~tylecr1/facade/CMP_facade_DB_2013.pdf) and wikipedia
+background:
+  description: "Outside the building"
+  label: 1
+  pixel: !!python/tuple
+  - 170
+  - 0
+  - 0
 facade:
   description: "Facade of a building is often the most important aspect from a design standpoint, as it sets the tone for the rest of the building"
   label: 2

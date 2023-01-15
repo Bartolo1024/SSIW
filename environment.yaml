@@ -14,10 +14,12 @@ dependencies:
   - pip:
       - black
       - flake8
+      - isort
       - tqdm
       - livelossplot
       - mmcv
       - mmsegmentation
       - timm
       - gensim
+      - pytorch-ignite
       - git+https://github.com/openai/CLIP.git

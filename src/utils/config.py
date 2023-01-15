@@ -1,7 +1,8 @@
-import yaml
+import copy
 import os
 from ast import literal_eval
-import copy
+
+import yaml
 
 
 class CfgNode(dict):
