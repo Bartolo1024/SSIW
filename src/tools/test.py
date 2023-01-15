@@ -32,9 +32,12 @@ from src.utils.config import CfgNode
 from src.utils.get_class_emb import create_embs_from_names
 from src.utils.labels_dict import ALL_LABEL2ID, UNAME2EM_NAME, UNI_UID2UNAME
 from src.utils.segformer import get_configured_segformer
-from src.utils.transforms_utils import (get_imagenet_mean_std, normalize_img,
-                                        pad_to_crop_sz,
-                                        resize_by_scaled_short_side)
+from src.utils.transforms_utils import (
+    get_imagenet_mean_std,
+    normalize_img,
+    pad_to_crop_sz,
+    resize_by_scaled_short_side,
+)
 
 
 def get_logger():

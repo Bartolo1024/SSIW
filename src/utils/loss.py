@@ -17,7 +17,9 @@ class HDLoss(nn.Module):
         self.logit_scale = logit_scale
         self.embeddings = embeddigns
 
-    def __call__(self, output: torch.Tensor, target: torch.Tensor, one_hot: torch.Tensor):
+    def __call__(
+        self, output: torch.Tensor, target: torch.Tensor, one_hot: torch.Tensor
+    ):
         bs, channels, h, w = output.shape
         output = output.permute(0, 2, 3, 1).view(-1, channels)
         cos_sim = nxn_cos_sim(output, self.embeddings)

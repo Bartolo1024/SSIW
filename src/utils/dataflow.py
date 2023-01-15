@@ -83,18 +83,20 @@ class CMPDataset(Dataset):
         self.embeddigns = embeddigns
         self.num_classes = embeddigns.shape[0]
 
-    def create_cmp_label_map(self, labels: Dict[str, Dict[str, Union[str, int]]], start_idx: int = 194):
+    def create_cmp_label_map(
+        self, labels: Dict[str, Dict[str, Union[str, int]]], start_idx: int = 194
+    ):
         ret = {}
         keys = labels.keys()
         name_to_id = {v: k for k, v in UNI_UID2UNAME.items()}
-        background_idx = name_to_id['unlabeled']
+        background_idx = name_to_id["unlabeled"]
         ret[1] = background_idx
         idx = start_idx
         for key in keys:
             if key in name_to_id:
-                ret[labels[key]['label']] = name_to_id[key]
+                ret[labels[key]["label"]] = name_to_id[key]
             else:
-                ret[labels[key]['label']] = idx
+                ret[labels[key]["label"]] = idx
                 idx += 1
         return ret
 
@@ -108,7 +110,9 @@ class CMPDataset(Dataset):
         feature_map = feature_map.view(*orig_shape, self.embeddigns.shape[-1])
         return feature_map
 
-    def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def __getitem__(
+        self, index: int
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         img_path, ann_path = self.items[index]
         img = PIL.Image.open(img_path).convert("RGB")
         ann = PIL.Image.open(ann_path)
@@ -116,7 +120,7 @@ class CMPDataset(Dataset):
         x = self.transform(img)
 
         ann = self.ann_transform(ann).squeeze(0)
-        ann = ann - 1 # change indexing
+        ann = ann - 1  # change indexing
         target = self.label_img_to_embedding_space(ann).permute(2, 0, 1)
         one_hot = self.create_one_hot_label(ann)
 

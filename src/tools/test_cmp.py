@@ -1,13 +1,14 @@
-import PIL.Image
 import click
 import numpy as np
+import PIL.Image
 import torch
+from matplotlib import pyplot as plt
 from torch import nn
-from  matplotlib import pyplot as plt
 from torchvision import transforms
-from src.tools.train import load_labels, load_embeddings, get_model
-from src.utils.transforms_utils import get_imagenet_mean_std
+
+from src.tools.train import get_model, load_embeddings, load_labels
 from src.utils.loss import nxn_cos_sim
+from src.utils.transforms_utils import get_imagenet_mean_std
 
 
 class ImageLoader:

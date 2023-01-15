@@ -10,8 +10,10 @@ from mmcv.cnn import ConvModule, DepthwiseSeparableConvModule
 from mmcv.cnn.bricks import build_norm_layer
 from mmcv.runner import load_checkpoint
 from mmseg.ops import resize
+
 # from mmseg.models.builder import BACKBONES
 from mmseg.utils import get_root_logger
+
 # pip install timm==0.3.2
 from timm.models.layers import DropPath, to_2tuple, trunc_normal_
 

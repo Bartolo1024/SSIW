@@ -1,19 +1,22 @@
+import json
 import logging
-from typing import Any, Callable, Optional, Sequence, Tuple, Union, List
-import yaml
+from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
+
 import click
+import livelossplot
 import torch
-from ignite.engine import Engine, Events
-from ignite.metrics import Loss, RunningAverage
+import yaml
 from ignite.contrib.handlers import ProgressBar
+from ignite.engine import Engine, Events
 from ignite.handlers import Checkpoint, global_step_from_engine
+from ignite.metrics import Loss, RunningAverage
 from torch import optim
 from torch.utils.data import DataLoader, random_split
 
 from src.utils.dataflow import CMPDataset
+from src.utils.get_class_emb import create_embs_from_names
 from src.utils.loss import HDLoss
 from src.utils.segformer import get_configured_segformer
-from src.utils.get_class_emb import create_embs_from_names
 
 
 def loss_running_average(
@@ -37,7 +40,7 @@ def loss_running_average(
 
 
 def load_labels(path):
-    with open(path, 'r') as f:
+    with open(path, "r") as f:
         labels = yaml.load(f, yaml.BaseLoader)
     return labels
 
@@ -45,12 +48,18 @@ def load_labels(path):
 def load_embeddings(labels_path: str):
     labels = load_labels(labels_path)
     keys = labels.keys()
-    descriptions = {k: v['description'] for k, v in labels.items()}
-    embs = create_embs_from_names(keys, descriptions, device='cpu')
+    descriptions = {k: v["description"] for k, v in labels.items()}
+    embs = create_embs_from_names(keys, descriptions, device="cpu")
     return embs
 
 
-def create_loaders(embeddigns: torch.Tensor, data_root: str, train_ratio: float = 0.8, batch_size: int = 4, img_size: Tuple[int, int] = (400, 400)):
+def create_loaders(
+    embeddigns: torch.Tensor,
+    data_root: str,
+    train_ratio: float = 0.8,
+    batch_size: int = 4,
+    img_size: Tuple[int, int] = (400, 400),
+):
     dataset = CMPDataset(embeddigns, data_root, img_size=img_size)
     train_len = int(len(dataset) * train_ratio)
     train_dataset, valid_dataset = random_split(
@@ -66,13 +75,17 @@ def get_model(num_classes: int, checkpoint_weights: str, freeze: bool = True):
     state_dict = torch.load(checkpoint_weights, map_location=torch.device("cpu"))
     state_dict = state_dict["state_dict"]
     state_dict = {k.replace("module.", ""): v for k, v in state_dict.items()}
-    if 'criterion.0.logit_scale' in state_dict:
+    if "criterion.0.logit_scale" in state_dict:
         logit_scale = state_dict["criterion.0.logit_scale"]
         del state_dict["criterion.0.logit_scale"]
     model.load_state_dict(state_dict)
     if freeze:
         for param in model.segmodel.encoder.parameters():
             param.requires_grad = False
+        model.segmodel.encoder.patch_embed1.requires_grad = True  # unfreeze stump
+        model.segmodel.encoder.patch_embed2.requires_grad = True  # unfreeze stump
+        model.segmodel.encoder.patch_embed3.requires_grad = True  # unfreeze stump
+        model.segmodel.encoder.patch_embed4.requires_grad = True  # unfreeze stump
     return model
 
 
@@ -85,12 +98,15 @@ def get_logit_scale(checkpoint_weights: str):
     return logit_scale
 
 
-def create_step_fn(model: torch.nn.Module,
+def create_step_fn(
+    model: torch.nn.Module,
     optimizer: torch.optim.Optimizer,
     loss_fn: Union[Callable, torch.nn.Module],
     device: Optional[Union[str, torch.device]] = None,
-    ):
-    def update(_: Engine, batch: Sequence[torch.Tensor]) -> Union[Any, Tuple[torch.Tensor]]:
+):
+    def update(
+        _: Engine, batch: Sequence[torch.Tensor]
+    ) -> Union[Any, Tuple[torch.Tensor]]:
         optimizer.zero_grad()
         model.train()
         x, target, one_hot = batch
@@ -101,18 +117,21 @@ def create_step_fn(model: torch.nn.Module,
         loss = loss_fn(y_pred, target, one_hot)
         loss.backward()
         optimizer.step()
-        return {
-            "loss": loss.item()
-        }
+        return {"loss": loss.item()}
+
     return update
 
 
 def create_evaluation_step_fn(
     model: torch.nn.Module,
     device: Optional[Union[str, torch.device]] = None,
-    output_transform: Callable[[Any, Any, Any, Any], Any] = lambda x, y, y_pred, one_hot: (y_pred, y, one_hot),
+    output_transform: Callable[
+        [Any, Any, Any, Any], Any
+    ] = lambda x, y, y_pred, one_hot: (y_pred, y, one_hot),
 ) -> Callable:
-    def evaluate_step(_: Engine, batch: Sequence[torch.Tensor]) -> Union[Any, Tuple[torch.Tensor]]:
+    def evaluate_step(
+        _: Engine, batch: Sequence[torch.Tensor]
+    ) -> Union[Any, Tuple[torch.Tensor]]:
         model.eval()
         with torch.no_grad():
             x, target, one_hot = batch
@@ -125,12 +144,19 @@ def create_evaluation_step_fn(
     return evaluate_step
 
 
-def create_print_fn(trainer: Engine, event: Events):
-    def print_metrics(engine: Engine):
+def create_log_fn(trainer: Engine, event: Events):
+    logger = livelossplot.PlotLosses(outputs=["ExtremaPrinter"])
+
+    def log_metrics(engine: Engine):
         current_step = global_step_from_engine(trainer)(None, event)
+        logger.update(engine.state.metrics)
         for k, v in engine.state.metrics.items():
             print(f"Step: {current_step} | {k}: {v}")
-    return print_metrics
+        logger.send()
+
+    with open("logs.json", "r") as fp:
+        json.dump(logger.logger.log_history, fp)
+    return log_metrics
 
 
 @click.command()
@@ -153,17 +179,17 @@ def train(batch_size, max_epochs, device, labels_path, checkpoint_weights, data_
     # TRAINER
     step_fn = create_step_fn(model, optimizer, loss_fn, device)
     trainer = Engine(step_fn)
-    print_metrics = create_print_fn(trainer, Events.ITERATION_COMPLETED)
-    loss_running_average(trainer, prefix='train_')
+    print_metrics = create_log_fn(trainer, Events.ITERATION_COMPLETED)
+    loss_running_average(trainer, prefix="train_")
     trainer.add_event_handler(Events.EPOCH_COMPLETED, print_metrics)
     ProgressBar().attach(trainer)
-    to_save = {'model': model, 'optimizer': optimizer, 'trainer': trainer}
-    checkpointer = Checkpoint(to_save, 'output/', n_saved=10)
+    to_save = {"model": model, "optimizer": optimizer, "trainer": trainer}
+    checkpointer = Checkpoint(to_save, "output/", n_saved=10)
     trainer.add_event_handler(Events.EPOCH_COMPLETED(every=10), checkpointer)
     trainer.add_event_handler(Events.COMPLETED, checkpointer)
 
     # EVALUATOR
-    metrics = {'val_loss': Loss(loss_fn)}
+    metrics = {"val_loss": Loss(loss_fn)}
     eval_step_fn = create_evaluation_step_fn(model, device)
     evaluator = Engine(eval_step_fn)
     for name, metric in metrics.items():
@@ -173,13 +199,15 @@ def train(batch_size, max_epochs, device, labels_path, checkpoint_weights, data_
 
     def eval(_: Engine):
         evaluator.run(val_loader)
+
     trainer.add_event_handler(Events.EPOCH_COMPLETED(every=2), eval)
 
     trainer.run(train_loader, max_epochs=max_epochs)
 
     sd = model.state_dict()
-    torch.save({'state_dict': sd}, 'out.pth')
+    torch.save({"state_dict": sd}, "out.pth")
 
 
 if __name__ == "__main__":
+    logging.getLogger().setLevel(logging.INFO)
     train()
