@@ -53,7 +53,7 @@ class CMPDataset(Dataset):
         self,
         embeddigns: torch.Tensor,
         data_dir: str = "data/",
-        img_size: Union[int, Tuple[int, int]] = (128, 128),
+        img_size: Union[int, Tuple[int, int]] = (512, 512),
     ):
         self.img_size: Tuple[int, int] = (
             (img_size, img_size) if isinstance(img_size, int) else img_size
@@ -62,14 +62,12 @@ class CMPDataset(Dataset):
         self.pair_crop = PairRandomCrop(img_size, pad_if_needed=True)
         self.transform = transforms.Compose(
             [
-                # transforms.Resize(img_size),
                 transforms.ToTensor(),
                 transforms.Normalize(mean, std),
             ]
         )
         self.ann_transform = transforms.Compose(
             [
-                # transforms.Resize(img_size, PIL.Image.NEAREST),
                 transforms.PILToTensor(),
             ]
         )
@@ -124,20 +122,9 @@ class CMPDataset(Dataset):
 
         return x, target, one_hot
 
-    # def map_pixels(self, x: torch.Tensor):
-    #     h, w = x.shape
-    #     ret = torch.zeros((h, w), dtype=torch.long)
-    #     for label, target in self.label_map.items():
-    #         mask = x == label
-    #         ret[mask] = target
-    #     return ret
-
     def create_one_hot_label(self, ann: torch.Tensor):
         base_shape = ann.shape
         ann = ann.view(-1)
-        try:
-            one_hot = F.one_hot(ann.long(), num_classes=self.num_classes)
-        except:
-            breakpoint()
+        one_hot = F.one_hot(ann.long(), num_classes=self.num_classes)
         one_hot = one_hot.view(*base_shape, self.num_classes).permute(2, 0, 1)
         return one_hot

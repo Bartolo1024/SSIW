@@ -5,30 +5,18 @@ CMP dataset finetuning based on repository contains the source code of the paper
 
 ```shell
 /bin/bash download.sh
+conda env create -f environment.yaml
+conda activate ssiw
 ```
-
 ```python
-python tools/test.py --config test_720_ss --user_label dog mouse horse rug_floormat wall person vegetation pizza
+python -m src.tools.train --max-epochs 100
 ```
 
 # Test
 
-* use your checkpoint
-* use bartlo1024 checkpoint google.com
+* train your checkpoint (by default saved as out.pth)
+* use bartlo1024 checkpoint [link]
 
-
-## Define the label list
-You can choose the label list used for semantic segmentation, for instance:
 ```python
-python tools/test.py --config test_720_ss --user_label dog mouse horse rug_floormat wall person vegetation pizza
-```
-Here is the comparison between adding label "cat" or not:
-
-![image](Test_Minist/ann_imgs/img8_vis_1.png)![image](Test_Minist/ann_imgs/img8_vis_2.png)
-
-
-## Define new labels
-You can also define your own categories described by sentences, for instance:
-```python
-python tools/test.py --config test_720_ss --new_definitions="{'deer': 'This is an image of deer, similar to sheep or dog.'}"
+python -m src.tools.test_cpm data/base/base/cmp_b0346.jpg --checkpoint-path out.pth
 ```

@@ -49,8 +49,8 @@ def load_embeddings(labels_path: str):
     return embs
 
 
-def create_loaders(embeddigns: torch.Tensor, data_root: str, train_ratio: float = 0.8, batch_size: int = 4):
-    dataset = CMPDataset(embeddigns, data_root)
+def create_loaders(embeddigns: torch.Tensor, data_root: str, train_ratio: float = 0.8, batch_size: int = 4, img_size: Tuple[int, int] = (512, 512)):
+    dataset = CMPDataset(embeddigns, data_root, img_size=img_size)
     train_len = int(len(dataset) * train_ratio)
     train_dataset, valid_dataset = random_split(
         dataset, lengths=[train_len, len(dataset) - train_len]
@@ -115,9 +115,9 @@ def create_evaluation_step_fn(
 
 def create_print_fn(trainer: Engine):
     def print_metrics(engine: Engine):
-        current_step = global_step_from_engine(trainer)
+        current_step = global_step_from_engine(trainer)()
         for k, v in engine.state.metrics.items():
-            logging.info(f"Step: {current_step} | {k}: {v}")
+            print(f"Step: {current_step} | {k}: {v}")
     return print_metrics
 
 
@@ -139,7 +139,7 @@ def train(batch_size, max_epochs, device, labels_path):
     step_fn = create_step_fn(model, optimizer, loss_fn, device)
     trainer = Engine(step_fn)
     print_metrics = create_print_fn(trainer)
-    loss_running_average(trainer)
+    loss_running_average(trainer, prefix='train_')
     trainer.add_event_handler(Events.EPOCH_COMPLETED, print_metrics)
     ProgressBar().attach(trainer)
 
