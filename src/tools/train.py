@@ -50,7 +50,7 @@ def load_embeddings(labels_path: str):
     return embs
 
 
-def create_loaders(embeddigns: torch.Tensor, data_root: str, train_ratio: float = 0.8, batch_size: int = 4, img_size: Tuple[int, int] = (512, 512)):
+def create_loaders(embeddigns: torch.Tensor, data_root: str, train_ratio: float = 0.8, batch_size: int = 4, img_size: Tuple[int, int] = (400, 400)):
     dataset = CMPDataset(embeddigns, data_root, img_size=img_size)
     train_len = int(len(dataset) * train_ratio)
     train_dataset, valid_dataset = random_split(
