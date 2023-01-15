@@ -1,9 +1,20 @@
-This repository contains the source code of our paper:
+CMP dataset finetuning based on repository contains the source code of the paper:
 [Wei Yin, Yifan Liu, Chunhua Shen, Anton van den Hengel, Baichuan Sun, The devil is in the labels: Semantic segmentation from sentences](https://arxiv.org/abs/2202.02002)
 
+# Run training
 
-Embedding: https://cloudstor.aarnet.edu.au/plus/s/gXaGsZyvoUwu97t
-CKPT: https://cloudstor.aarnet.edu.au/plus/s/AtYYaVSVVAlEwve
+```shell
+/bin/bash download.sh
+```
+
+```python
+python tools/test.py --config test_720_ss --user_label dog mouse horse rug_floormat wall person vegetation pizza
+```
+
+# Test
+
+* use your checkpoint
+* use bartlo1024 checkpoint google.com
 
 
 ## Define the label list
