@@ -7,15 +7,15 @@ from src.utils.labels_dict import UNI_UID2UNAME, ALL_LABEL2ID, UNAME2EM_NAME
 UNI_UNAME2ID = {v: i for i, v in UNI_UID2UNAME.items()}
 
 
-def create_embs_from_names(labels, other_descriptions=None):
+def create_embs_from_names(labels, other_descriptions=None, device=None):
     import clip
 
-    DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+    DEVICE = device if device else ('cuda' if torch.cuda.is_available() else 'cpu')
     CLIP_TEXT_MODEL, PREPROCESS = clip.load("ViT-B/32", device=DEVICE)
     u_descrip_dir = "data/clip_descriptions"
     embs = []
     for name in labels:
-        if name in UNAME2EM_NAME.keys():
+        if name in UNAME2EM_NAME.keys() and os.path.isfile(os.path.join(u_descrip_dir, UNAME2EM_NAME[name] + ".txt")):
             with open(
                 os.path.join(u_descrip_dir, UNAME2EM_NAME[name] + ".txt"), "r"
             ) as f:

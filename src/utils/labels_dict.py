@@ -198,7 +198,7 @@ UNI_UID2UNAME = {
     190: "waterfall",
     191: "wall",
     192: "window",
-    193: "window_blind",
+    193: "blind",
     255: "unlabeled",
 }
 

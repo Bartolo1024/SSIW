@@ -9,6 +9,7 @@ from tqdm import tqdm
 from torch.utils.data import random_split
 from src.utils.dataflow import CMPDataset
 from src.utils.segformer import get_configured_segformer
+from src.utils.get_class_emb import create_embs_from_names
 
 
 def create_loaders(data_root: str, train_ratio: float = 0.8, batch_size: int = 4):
@@ -52,7 +53,7 @@ def train(batch_size, device):
         device
     )
     x = torch.rand(2, 3, 128, 128).to(device)
-    breakpoint()
+    it = train_loader.dataset.__getitem__(0)
     pass
 
 
