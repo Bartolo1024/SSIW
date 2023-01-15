@@ -70,7 +70,7 @@ def create_loaders(
     return train_dataloader, val_dataloader
 
 
-def get_model(num_classes: int, checkpoint_weights: str, freeze: bool = True):
+def get_model(num_classes: int, checkpoint_weights: str, freeze: bool = False):
     model = get_configured_segformer(num_classes, None, load_imagenet_model=False)
     state_dict = torch.load(checkpoint_weights, map_location=torch.device("cpu"))
     state_dict = state_dict["state_dict"]
