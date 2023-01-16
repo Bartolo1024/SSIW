@@ -1,3 +1,5 @@
+import os.path
+
 import click
 import numpy as np
 import PIL.Image
@@ -22,21 +24,33 @@ class ImageLoader:
         img = PIL.Image.open(img_path).convert("RGB")
         x = self.to_tensor(img)
         x = self.normalizer(x).to(self.device)
-        x = self.normalizer(x).to(self.device)
         return img, x
 
 
 def predict(x: torch.Tensor, model: nn.Module, embeddings: torch.Tensor):
-    pred, _, _ = model(x.unsqueeze(0))
+    with torch.no_grad():
+        pred, _, _ = model(x.unsqueeze(0))
     bs, channels, h, w = pred.shape
     output = pred.permute(0, 2, 3, 1).view(-1, channels)
     cos_sim = nxn_cos_sim(output, embeddings)
-    labels = cos_sim.argmax(dim=-1).view(h, w)
+    _, labels = cos_sim.max(dim=-1)
+    labels = labels.view(h, w)
     return labels.cpu().numpy()
 
 
-def plot(labels: np.ndarray):
-    plt.imshow(labels)
+def plot(img, labels: np.ndarray, target=None):
+    fig, axs = plt.subplots(1, 3)
+    axs[0].imshow(img)
+    axs[0].set_title('Input')
+    axs[0].axis('off')
+    axs[1].imshow(labels)
+    axs[1].axis('off')
+    axs[1].set_title('Prediction')
+    if target:
+        axs[2].imshow(target)
+        axs[2].axis('off')
+        axs[2].set_title('Target')
+    plt.savefig("pred.png")
     plt.show()
 
 
@@ -51,10 +65,15 @@ def train(img_path, checkpoint_path, device, labels_path):
     device = torch.device(device)
     embs = load_embeddings(labels_path)
     embs = embs.to(device)
-    model = get_model(num_classes=512, checkpoint_weights=checkpoint_path).to(device)
+    model = get_model(num_classes=512, checkpoint_weights=checkpoint_path).to(device).eval()
     img, x = img_loader(img_path)
     labels = predict(x, model, embs)
-    plot(labels)
+    tgt_path = img_path.replace('.jpg', '.png')
+    if os.path.isfile(tgt_path):
+        target = PIL.Image.open(tgt_path)
+        plot(img, labels, target)
+    else:
+        plot(img, labels)
 
 
 if __name__ == "__main__":

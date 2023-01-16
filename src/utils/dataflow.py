@@ -1,9 +1,8 @@
 import os
-from typing import Dict, Tuple, Union
+from typing import Dict, Tuple, Union, Sequence
 
 import PIL.Image
 import torch
-import torch.nn.functional as F
 from torch.utils.data import Dataset
 from torchvision import transforms
 from torchvision.transforms.functional import crop, get_dimensions, pad
@@ -51,8 +50,7 @@ class PairRandomCrop(transforms.RandomCrop):
 class CMPDataset(Dataset):
     def __init__(
         self,
-        embeddigns: torch.Tensor,
-        data_dir: str = "data/",
+        data_dirs: Sequence[str] = ("data/",),
         img_size: Union[int, Tuple[int, int]] = (512, 512),
     ):
         self.img_size: Tuple[int, int] = (
@@ -72,16 +70,15 @@ class CMPDataset(Dataset):
             ]
         )
         self.items = []
-        for file in os.listdir(data_dir):
-            if file.endswith(".jpg"):
-                img_path = os.path.join(data_dir, file)
-                ann_path = os.path.join(data_dir, file.replace(".jpg", ".png"))
-                assert os.path.isfile(
-                    ann_path
-                ), f"Corresponding annotation missed {ann_path}"
-                self.items.append((img_path, ann_path))
-        self.embeddigns = embeddigns
-        self.num_classes = embeddigns.shape[0]
+        for data_dir in data_dirs:
+            for file in os.listdir(data_dir):
+                if file.endswith(".jpg"):
+                    img_path = os.path.join(data_dir, file)
+                    ann_path = os.path.join(data_dir, file.replace(".jpg", ".png"))
+                    assert os.path.isfile(
+                        ann_path
+                    ), f"Corresponding annotation missed {ann_path}"
+                    self.items.append((img_path, ann_path))
 
     def create_cmp_label_map(
         self, labels: Dict[str, Dict[str, Union[str, int]]], start_idx: int = 194
@@ -103,16 +100,9 @@ class CMPDataset(Dataset):
     def __len__(self):
         return len(self.items)
 
-    def label_img_to_embedding_space(self, x: torch.Tensor):
-        orig_shape = x.shape
-        indices = x.view(-1).long()
-        feature_map = self.embeddigns[indices]
-        feature_map = feature_map.view(*orig_shape, self.embeddigns.shape[-1])
-        return feature_map
-
     def __getitem__(
         self, index: int
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         img_path, ann_path = self.items[index]
         img = PIL.Image.open(img_path).convert("RGB")
         ann = PIL.Image.open(ann_path)
@@ -121,14 +111,5 @@ class CMPDataset(Dataset):
 
         ann = self.ann_transform(ann).squeeze(0)
         ann = ann - 1  # change indexing
-        target = self.label_img_to_embedding_space(ann).permute(2, 0, 1)
-        one_hot = self.create_one_hot_label(ann)
 
-        return x, target, one_hot
-
-    def create_one_hot_label(self, ann: torch.Tensor):
-        base_shape = ann.shape
-        ann = ann.view(-1)
-        one_hot = F.one_hot(ann.long(), num_classes=self.num_classes)
-        one_hot = one_hot.view(*base_shape, self.num_classes).permute(2, 0, 1)
-        return one_hot
+        return x, ann

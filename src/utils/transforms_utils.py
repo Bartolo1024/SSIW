@@ -15,11 +15,11 @@ def get_imagenet_mean_std() -> Tuple[
     -   mean: Tuple[float,float,float],
     -   std: Tuple[float,float,float] = None
     """
-    value_scale = 255
+    # value_scale = 255
     mean = [0.485, 0.456, 0.406]
-    mean = [item * value_scale for item in mean]
+    # mean = [item * value_scale for item in mean]
     std = [0.229, 0.224, 0.225]
-    std = [item * value_scale for item in std]
+    # std = [item * value_scale for item in std]
     return mean, std
 
 
