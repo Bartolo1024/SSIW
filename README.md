@@ -21,6 +21,8 @@ python -m src.tools.train --max-epochs 100
 python -m src.tools.test_cpm data/base/base/cmp_b0346.jpg --checkpoint-path checkpoint.pth
 ```
 
+![Annotated](src/ann_imgs/pred.png)
+
 # Raport
 
 I have implemented CMP dataset loading and model training. Base repository contains only testing stage.
@@ -30,7 +32,7 @@ Labels in the CMP dateset seems to be precise, so I have implemented only L_hd l
 Due to the deadline I have frozen the temperature parameter in the loss.
 I think that learnable parameters in the loss could slow down the development process, but it is worth to replace it with learnable parameter and check performance.
 
-Typically large models overfit on small datasets, but in that case I have tried train only head (strong regularization) and it didn't improve the performance.
+Typically large models overfit on small datasets, but in that case I have tried train only head (strong regularization) and it decreased the performance.
 It is definitely worth to check more augmentations, hyperparameters and longer training time. It can be performed in next steps.
 
 Batch size and image crop size are adapted to my VRAM resources, not the model performance.
