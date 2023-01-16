@@ -16,7 +16,7 @@ python -m src.tools.train --max-epochs 100
 # Test
 
 * train your checkpoint (by default saved as out.pth)
-* use my [checkpoint](https://drive.google.com/file/d/1UsAkHoSSrHX5UJwmteTi4oQWKVIPdUKn/view?usp=share_link)
+* use my [checkpoint](https://drive.google.com/file/d/1Ud2q10bH26SVfwaNxp9z4Yyv2TSJ9Ls-/view?usp=share_link)
 
 ```python
 python -m src.tools.test_cpm data/base/base/cmp_b0346.jpg --checkpoint-path checkpoint.pth
